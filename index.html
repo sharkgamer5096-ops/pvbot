@@ -1,0 +1,377 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PVBOT Notepad</title>
+<style>
+:root {
+  --bg:#0b1020; --panel:#121a2d; --panel2:#19243b;
+  --text:#eef3ff; --muted:#94a3bd; --accent:#7c5cff;
+  --border:#293651; --editor:#10192b;
+}
+* {box-sizing:border-box}
+body {
+  margin:0; height:100vh; overflow:hidden;
+  font-family:Segoe UI,Arial,sans-serif;
+  background:var(--bg); color:var(--text);
+}
+body.light {
+  --bg:#edf1fa; --panel:#fff; --panel2:#e7ebf5;
+  --text:#172033; --muted:#66728b;
+  --border:#d5dcec; --editor:#fff;
+}
+.app {display:flex;height:100vh}
+.sidebar {
+  width:235px;background:var(--panel);
+  border-right:1px solid var(--border);
+  padding:20px;display:flex;flex-direction:column;gap:15px;
+}
+.logo {font-size:25px;font-weight:800;letter-spacing:1px}
+.logo span {color:var(--accent)}
+.small {font-size:12px;color:var(--muted)}
+button,select,input {
+  font:inherit;
+}
+button {
+  border:1px solid var(--border);background:var(--panel2);
+  color:var(--text);padding:10px 13px;border-radius:10px;
+  cursor:pointer;transition:.2s;
+}
+button:hover {border-color:var(--accent);transform:translateY(-1px)}
+.primary {background:var(--accent);color:white;border:0}
+.side-btn {width:100%;text-align:left}
+.section {color:var(--muted);font-size:11px;letter-spacing:1.5px;margin-top:10px}
+#fileList {overflow:auto;display:flex;flex-direction:column;gap:7px}
+.file-item {font-size:13px;text-align:left;overflow:hidden;text-overflow:ellipsis}
+.bottom {margin-top:auto;color:var(--muted);font-size:12px}
+.main {flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar {
+  height:66px;padding:0 22px;display:flex;align-items:center;
+  justify-content:space-between;border-bottom:1px solid var(--border);
+  background:var(--panel);gap:10px;
+}
+.top-left,.top-right {display:flex;align-items:center;gap:10px}
+#docName {
+  background:transparent;border:0;color:var(--text);
+  font-size:16px;font-weight:600;width:220px;outline:none;
+}
+.status {font-size:12px;color:var(--muted)}
+.workspace {flex:1;display:flex;min-height:0}
+.document-area {flex:1;display:flex;flex-direction:column;min-width:0}
+.toolbar {
+  padding:12px 18px;display:flex;gap:7px;flex-wrap:wrap;
+  background:var(--panel);border-bottom:1px solid var(--border);
+}
+.toolbar button {padding:7px 11px}
+select,.searchbox {
+  background:var(--panel2);color:var(--text);
+  border:1px solid var(--border);border-radius:8px;padding:8px;
+}
+.page-wrap {
+  flex:1;overflow:auto;padding:35px 20px;
+  background:radial-gradient(ellipse at top,#202b4c 0%,var(--bg) 65%);
+}
+body.light .page-wrap {background:#edf1fa}
+.page {
+  max-width:850px;min-height:650px;margin:auto;
+  padding:55px 65px;background:var(--editor);
+  border:1px solid var(--border);border-radius:15px;
+  box-shadow:0 15px 55px #0003;
+}
+#editor {
+  min-height:540px;outline:none;line-height:1.8;
+  font-size:16px;overflow-wrap:anywhere;
+}
+#editor:empty:before {
+  content:"Start writing your ideas here...";
+  color:var(--muted);pointer-events:none;
+}
+.statusbar {
+  height:34px;padding:0 18px;display:flex;
+  justify-content:space-between;align-items:center;
+  background:var(--panel);border-top:1px solid var(--border);
+  color:var(--muted);font-size:12px;
+}
+.ai-panel {
+  width:285px;border-left:1px solid var(--border);
+  background:var(--panel);padding:18px;display:flex;
+  flex-direction:column;gap:12px;
+}
+.ai-title {font-weight:700;font-size:17px}
+.ai-title span {color:var(--accent)}
+.ai-info {font-size:12px;color:var(--muted);line-height:1.6}
+.ai-panel textarea {
+  resize:vertical;min-height:100px;max-height:220px;
+  background:var(--panel2);border:1px solid var(--border);
+  border-radius:10px;color:var(--text);padding:12px;
+}
+.ai-output {
+  flex:1;overflow:auto;white-space:pre-wrap;
+  background:var(--panel2);border-radius:10px;
+  padding:12px;font-size:13px;line-height:1.6;
+}
+.ai-actions {display:grid;grid-template-columns:1fr 1fr;gap:8px}
+@media(max-width:850px) {
+  .sidebar {width:65px;padding:12px 7px}
+  .sidebar .logo,.sidebar .section,.sidebar .small,
+  .sidebar .side-btn span,.bottom {display:none}
+  .side-btn {text-align:center;font-size:17px}
+  .ai-panel {display:none}
+  .page {padding:25px;min-height:500px}
+}
+@media(max-width:550px) {
+  .topbar {padding:0 9px}
+  #docName {width:115px}
+  .status {display:none}
+  .page-wrap {padding:12px 8px}
+  .page {padding:20px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="logo">PV<span>BOT</span></div>
+    <div class="small">SMART NOTEPAD STUDIO</div>
+    <button class="primary side-btn" onclick="newFile()">＋ <span>New document</span></button>
+    <button class="side-btn" onclick="openFile()">📂 <span>Open file</span></button>
+    <button class="side-btn" onclick="saveFile()">💾 <span>Save document</span></button>
+    <input type="file" id="fileInput" accept=".txt,.html,.md,.json" hidden>
+    <div class="section">YOUR DOCUMENTS</div>
+    <div id="fileList"></div>
+    <div class="bottom">PVBOT NOTEPAD<br>Created by Prithiv K</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div class="top-left">
+        <input id="docName" value="Untitled Document" aria-label="Document name">
+        <span class="status" id="saveStatus">Ready</span>
+      </div>
+      <div class="top-right">
+        <button onclick="toggleTheme()" title="Change theme">◐</button>
+        <button onclick="downloadPDF()" title="Print or save as PDF">🖨</button>
+        <button class="primary" onclick="saveFile()">Save</button>
+      </div>
+    </header>
+
+    <div class="workspace">
+      <section class="document-area">
+        <div class="toolbar">
+          <button onclick="cmd('undo')" title="Undo">↶</button>
+          <button onclick="cmd('redo')" title="Redo">↷</button>
+          <button onclick="cmd('bold')"><b>B</b></button>
+          <button onclick="cmd('italic')"><i>I</i></button>
+          <button onclick="cmd('underline')"><u>U</u></button>
+          <button onclick="cmd('strikeThrough')"><s>S</s></button>
+          <select id="fontSelect" onchange="setFont(this.value)">
+            <option value="Segoe UI">Segoe UI</option>
+            <option value="Arial">Arial</option>
+            <option value="Georgia">Georgia</option>
+            <option value="Times New Roman">Times New Roman</option>
+            <option value="Courier New">Courier New</option>
+          </select>
+          <select onchange="setSize(this.value)">
+            <option value="3">Normal</option>
+            <option value="2">Small</option>
+            <option value="4">Large</option>
+            <option value="5">Extra large</option>
+            <option value="6">Huge</option>
+          </select>
+          <button onclick="cmd('justifyLeft')">☰</button>
+          <button onclick="cmd('justifyCenter')">≡</button>
+          <button onclick="cmd('justifyRight')">☷</button>
+          <button onclick="cmd('insertUnorderedList')">• List</button>
+          <button onclick="cmd('insertOrderedList')">1. List</button>
+          <button onclick="addLink()">🔗</button>
+          <button onclick="findText()">🔎 Find</button>
+          <button onclick="replaceText()">Replace</button>
+          <button onclick="clearFormatting()">Clear style</button>
+        </div>
+
+        <div class="page-wrap">
+          <div class="page">
+            <div id="editor" contenteditable="true" spellcheck="true"></div>
+          </div>
+        </div>
+        <footer class="statusbar">
+          <span id="wordCount">0 words · 0 characters</span>
+          <span>Local editor · PVBOT</span>
+        </footer>
+      </section>
+
+      <aside class="ai-panel">
+        <div class="ai-title">✦ PVBOT <span>AI</span></div>
+        <div class="ai-info">
+          Your writing companion. Ask for help with your notes, ideas or text.
+          Real AI replies require an AI connection.
+        </div>
+        <textarea id="aiPrompt" placeholder="Ask PVBOT something..."></textarea>
+        <button class="primary" onclick="askAI()">Send to PVBOT →</button>
+        <div class="ai-output" id="aiOutput">Hello! I'm PVBOT. I can help you organise your writing once an AI service is connected.</div>
+        <div class="ai-actions">
+          <button onclick="insertAI()">Insert text</button>
+          <button onclick="copyAI()">Copy reply</button>
+        </div>
+      </aside>
+    </div>
+  </main>
+</div>
+
+<script>
+const editor = document.getElementById('editor');
+const docName = document.getElementById('docName');
+const fileInput = document.getElementById('fileInput');
+let currentFile = 'Untitled Document';
+let aiReply = '';
+
+function cmd(command) {
+  editor.focus();
+  document.execCommand(command,false,null);
+  updateCount();
+}
+function setFont(font) {
+  editor.focus();
+  document.execCommand('fontName',false,font);
+}
+function setSize(size) {
+  editor.focus();
+  document.execCommand('fontSize',false,size);
+}
+function addLink() {
+  const url = prompt('Enter website address:');
+  if(url) {
+    editor.focus();
+    document.execCommand('createLink',false,url);
+  }
+}
+function clearFormatting() {
+  editor.focus();
+  document.execCommand('removeFormat',false,null);
+}
+function newFile() {
+  if(!confirm('Create a new document? Save your current work first if needed.')) return;
+  editor.innerHTML='';
+  docName.value='Untitled Document';
+  currentFile='Untitled Document';
+  updateCount();
+}
+function openFile() {
+  fileInput.click();
+}
+fileInput.addEventListener('change',function() {
+  const file=this.files[0];
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    editor.textContent=reader.result;
+    docName.value=file.name.replace(/\.[^.]+$/,'');
+    currentFile=docName.value;
+    updateCount();
+    setStatus('File opened');
+  };
+  reader.readAsText(file);
+  this.value='';
+});
+function saveFile() {
+  const name=(docName.value.trim()||'Untitled Document');
+  const blob=new Blob([editor.innerHTML],{type:'text/html'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;a.download=name+'.html';
+  a.click();
+  URL.revokeObjectURL(url);
+  localStorage.setItem('pvbot_'+name,editor.innerHTML);
+  currentFile=name;
+  refreshFiles();
+  setStatus('Downloaded and saved locally');
+}
+function downloadPDF() {
+  window.print();
+}
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  localStorage.setItem('pvbot_theme',
+    document.body.classList.contains('light')?'light':'dark');
+}
+function setStatus(message) {
+  document.getElementById('saveStatus').textContent=message;
+}
+function updateCount() {
+  const text=editor.innerText.trim();
+  const words=text?text.split(/\s+/).length:0;
+  document.getElementById('wordCount').textContent=
+    words+' words · '+text.length+' characters';
+  setStatus('Editing');
+}
+editor.addEventListener('input',updateCount);
+docName.addEventListener('input',()=>setStatus('Name changed'));
+function refreshFiles() {
+  const list=document.getElementById('fileList');
+  list.innerHTML='';
+  Object.keys(localStorage).filter(k=>k.startsWith('pvbot_'))
+  .forEach(key=>{
+    const name=key.substring(6);
+    const b=document.createElement('button');
+    b.className='file-item';
+    b.textContent='📄 '+name;
+    b.onclick=()=>{
+      editor.innerHTML=localStorage.getItem(key)||'';
+      docName.value=name;
+      currentFile=name;
+      updateCount();
+    };
+    list.appendChild(b);
+  });
+}
+function findText() {
+  const q=prompt('Find text:');
+  if(!q) return;
+  const found=window.find(q);
+  if(!found) alert('Text not found.');
+}
+function replaceText() {
+  const oldText=prompt('Find what?');
+  if(!oldText) return;
+  const newText=prompt('Replace with?');
+  if(newText===null) return;
+  editor.focus();
+  const text=editor.innerHTML;
+  const escaped=oldText.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+  editor.innerHTML=text.replace(new RegExp(escaped,'gi'),()=>newText);
+  updateCount();
+}
+function askAI() {
+  const promptText=document.getElementById('aiPrompt').value.trim();
+  if(!promptText) {
+    alert('Please enter a prompt.');
+    return;
+  }
+  aiReply='PVBOT AI is not connected yet.\n\nYour request: '+promptText+
+    '\n\nTo enable real AI responses, a secure backend and an AI API connection are needed.';
+  document.getElementById('aiOutput').textContent=aiReply;
+}
+function insertAI() {
+  if(!aiReply) return;
+  editor.focus();
+  document.execCommand('insertText',false,aiReply);
+  updateCount();
+}
+function copyAI() {
+  if(!aiReply) return;
+  if(navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(aiReply).then(()=>alert('Copied!'))
+    .catch(()=>alert('Copy is unavailable in this browser.'));
+  } else {
+    alert('Clipboard is not supported in this browser.');
+  }
+}
+if(localStorage.getItem('pvbot_theme')==='light')
+  document.body.classList.add('light');
+refreshFiles();
+updateCount();
+</script>
+</body>
+</html>
